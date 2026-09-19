@@ -5,6 +5,7 @@ import { SignalBuilder } from "./tracking/signals";
 import { Stage } from "./render/stage";
 import { Particles } from "./render/particles";
 import { ItemController } from "./items/controller";
+import { CigaretteExperience } from "./items/cigarette";
 import { Sfx } from "./audio/sfx";
 import { pizza } from "./items/pizza";
 import { cake } from "./items/cake";
@@ -79,19 +80,37 @@ function startApp(tracker: Tracker) {
   const stage = new Stage(canvas, video);
   const sfx = new Sfx();
   const soft = new Particles(400, false);
-  const glow = new Particles(200, true);
+  const glow = new Particles(220, true);
+  const smoke = new Particles(500, false);
   stage.scene.add(soft.points);
-  stage.scene.add(glow.points);
+  stage.scene.add(smoke.points);
+  stage.scene.add(glow.points); // additive glow (embers/sparks) drawn last, on top
 
   const signals = new SignalBuilder(stage);
   const controller = new ItemController(stage, { soft, glow }, sfx, hintEl);
+  const cigarette = new CigaretteExperience(stage, { soft, glow, smoke }, sfx, hintEl);
+
+  type Mode = "pizza" | "cake" | "cigarette";
+  let mode: Mode = "pizza";
   controller.select(pizza);
+
+  function setMode(next: Mode) {
+    if (next === mode) return;
+    mode = next;
+    hintEl.textContent = "";
+    if (next === "cigarette") {
+      controller.clear();
+      cigarette.activate();
+    } else {
+      cigarette.deactivate();
+      controller.select(ITEMS[next]);
+    }
+  }
 
   menu.addEventListener("click", (e) => {
     const btn = (e.target as HTMLElement).closest<HTMLButtonElement>("button[data-item]");
     if (!btn) return;
-    const id = btn.dataset.item as keyof typeof ITEMS;
-    controller.select(ITEMS[id]);
+    setMode(btn.dataset.item as Mode);
     for (const b of menu.querySelectorAll("button")) b.classList.toggle("active", b === btn);
   });
 
@@ -104,8 +123,11 @@ function startApp(tracker: Tracker) {
     const raw = tracker.detect(video, now);
     const sig = signals.update(raw.face, raw.hands, now / 1000);
 
-    controller.update(sig, now / 1000, dt);
+    if (mode === "cigarette") cigarette.update(sig, now / 1000, dt);
+    else controller.update(sig, now / 1000, dt);
+
     soft.update(dt);
+    smoke.update(dt);
     glow.update(dt);
     stage.render();
   }

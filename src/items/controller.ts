@@ -208,7 +208,8 @@ export class ItemController {
     return [w * 0.25, -h * 0.12];
   }
 
-  private clear() {
+  /** Removes whatever item is currently active. Safe to call when nothing is selected. */
+  clear() {
     const it = this.active;
     if (!it) return;
     this.stage.scene.remove(it.mesh);

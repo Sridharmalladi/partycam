@@ -17,6 +17,10 @@ export interface HandSignals {
   pinchY: number;
   pinching: boolean;
   pinchStarted: boolean;
+  /** Angle (radians) of the thumb->index line, for orienting held props naturally. */
+  gripAngle: number;
+  wristX: number;
+  wristY: number;
 }
 
 export interface FrameSignals {
@@ -100,18 +104,30 @@ export class SignalBuilder {
       const key = `hand.${hands?.handedness?.[i]?.[0]?.categoryName ?? i}`;
       this.seen(key, t);
 
-      const [thx, thy] = map(h[HAND.thumbTip].x, h[HAND.thumbTip].y);
-      const [ix, iy] = map(h[HAND.indexTip].x, h[HAND.indexTip].y);
+      const [rawThx, rawThy] = map(h[HAND.thumbTip].x, h[HAND.thumbTip].y);
+      const [rawIx, rawIy] = map(h[HAND.indexTip].x, h[HAND.indexTip].y);
       const [wx, wy] = map(h[HAND.wrist].x, h[HAND.wrist].y);
       const [mcx, mcy] = map(h[HAND.middleMcp].x, h[HAND.middleMcp].y);
 
       const handSize = Math.max(dist(wx, wy, mcx, mcy), 1);
-      const ratio = dist(thx, thy, ix, iy) / handSize;
+      const ratio = dist(rawThx, rawThy, rawIx, rawIy) / handSize;
       const gate = this.gate(key);
       const changed = gate.update(ratio);
 
+      const [thx, thy] = this.point(`${key}.thumb`).filter(rawThx, rawThy, t);
+      const [ix, iy] = this.point(`${key}.index`).filter(rawIx, rawIy, t);
       const [px, py] = this.point(`${key}.pinch`).filter((thx + ix) / 2, (thy + iy) / 2, t);
-      handSigs.push({ key, pinchX: px, pinchY: py, pinching: gate.on, pinchStarted: changed && gate.on });
+      const gripAngle = Math.atan2(iy - thy, ix - thx);
+      handSigs.push({
+        key,
+        pinchX: px,
+        pinchY: py,
+        pinching: gate.on,
+        pinchStarted: changed && gate.on,
+        gripAngle,
+        wristX: wx,
+        wristY: wy,
+      });
     });
 
     return { t, face: faceSig, hands: handSigs };

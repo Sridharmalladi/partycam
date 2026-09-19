@@ -11,8 +11,11 @@ export interface EmitOptions {
   life?: [number, number];
   size?: [number, number];
   color?: THREE.ColorRepresentation | THREE.ColorRepresentation[];
+  alpha?: number;
   gravity?: number;
   drag?: number;
+  grow?: number; // px/s size growth, negative shrinks
+  wobble?: number; // lateral swirl strength, for smoke/drifting particles
 }
 
 const VERT = /* glsl */ `
@@ -48,6 +51,7 @@ export class Particles {
 
   private max: number;
   private alive = 0;
+  private time = 0;
   private geo = new THREE.BufferGeometry();
   private material: THREE.ShaderMaterial;
 
@@ -61,6 +65,9 @@ export class Particles {
   private startAlpha: Float32Array;
   private gravity: Float32Array;
   private drag: Float32Array;
+  private grow: Float32Array;
+  private wobble: Float32Array;
+  private seed: Float32Array;
 
   constructor(max: number, additive = false) {
     this.max = max;
@@ -74,6 +81,9 @@ export class Particles {
     this.startAlpha = new Float32Array(max);
     this.gravity = new Float32Array(max);
     this.drag = new Float32Array(max);
+    this.grow = new Float32Array(max);
+    this.wobble = new Float32Array(max);
+    this.seed = new Float32Array(max);
 
     const attr = (arr: Float32Array, n: number) =>
       new THREE.BufferAttribute(arr, n).setUsage(THREE.DynamicDrawUsage);
@@ -120,13 +130,17 @@ export class Particles {
       this.col[i * 3 + 2] = c.b;
       this.size[i] = rand(o.size ?? [6, 14]);
       this.life[i] = this.maxLife[i] = rand(o.life ?? [0.6, 1.2]);
-      this.startAlpha[i] = this.alpha[i] = 1;
+      this.startAlpha[i] = this.alpha[i] = o.alpha ?? 1;
       this.gravity[i] = o.gravity ?? 0;
       this.drag[i] = o.drag ?? 0;
+      this.grow[i] = o.grow ?? 0;
+      this.wobble[i] = o.wobble ?? 0;
+      this.seed[i] = Math.random() * 1000;
     }
   }
 
   update(dt: number) {
+    this.time += dt;
     let i = 0;
     while (i < this.alive) {
       this.life[i] -= dt;
@@ -138,6 +152,10 @@ export class Particles {
 
       const vx = i * 2;
       const vy = vx + 1;
+      const w = this.wobble[i];
+      if (w) {
+        this.vel[vx] += Math.sin(this.time * 2.1 + this.seed[i]) * w * dt;
+      }
       this.vel[vy] -= this.gravity[i] * dt;
       const damp = Math.max(0, 1 - this.drag[i] * dt);
       this.vel[vx] *= damp;
@@ -145,6 +163,7 @@ export class Particles {
 
       this.pos[i * 3] += this.vel[vx] * dt;
       this.pos[i * 3 + 1] += this.vel[vy] * dt;
+      this.size[i] = Math.max(0, this.size[i] + this.grow[i] * dt);
 
       const t = this.life[i] / this.maxLife[i];
       this.alpha[i] = this.startAlpha[i] * Math.min(1, t * 2.5) * Math.min(1, (1 - t) * 10 + 0.2);
@@ -172,5 +191,8 @@ export class Particles {
     this.startAlpha[to] = this.startAlpha[from];
     this.gravity[to] = this.gravity[from];
     this.drag[to] = this.drag[from];
+    this.grow[to] = this.grow[from];
+    this.wobble[to] = this.wobble[from];
+    this.seed[to] = this.seed[from];
   }
 }
