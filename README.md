@@ -1,15 +1,22 @@
+<div align="center">
+
 # PartyCam
 
-Webcam party trick, in the browser. Pinch a slice of pizza and take a bite, or blow out the candles on a cake — tracked live from your face and hands. Nothing is uploaded: all tracking runs on-device via MediaPipe.
+**A tiny webcam-powered party trick.**
 
-## Try it
+[Open the live demo](https://sridharmalladi.github.io/partycam/)
 
-Open the deployed site on your phone or laptop, tap **Start camera**, and allow camera access:
+</div>
 
-- **Pizza** — pinch with thumb and index finger near the slice to grab it, bring it to your mouth, open and close your jaw to bite.
-- **Cake** — pucker or purse your lips toward the screen to blow out the candles.
+Pinch a slice of pizza, blow out birthday candles, or light a pixel-art cigarette using your face and hands. MediaPipe runs in your browser; camera video stays on your device.
 
-Requires a real browser tab (not an app's built-in in-app browser) and camera permission.
+## Play
+
+1. Open the demo in a browser tab and choose **Start camera**.
+2. Allow camera access.
+3. Pick a scene and follow the on-screen gesture prompts.
+
+Camera access requires HTTPS or localhost.
 
 ## Run locally
 
@@ -18,8 +25,4 @@ npm install
 npm run dev
 ```
 
-Open the printed `http://localhost:5173` URL — browsers treat `localhost` as a secure context, so the camera works there. Testing over LAN on a phone needs HTTPS (browsers block camera access on plain HTTP for any non-localhost origin); the deployed GitHub Pages site is HTTPS by default and works on any device.
-
-## Deploy
-
-Pushing to `main` builds and deploys to GitHub Pages automatically via `.github/workflows/deploy.yml`. The site is served at `/partycam/`, matching `base` in `vite.config.ts`.
+Open the local URL printed by Vite. GitHub Pages deploys automatically when changes are pushed to `main`.
